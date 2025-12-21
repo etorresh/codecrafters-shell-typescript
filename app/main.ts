@@ -35,6 +35,7 @@ while (true) {
     } 
     else {
       const paths = process.env.PATH?.split(delimiter) ?? [];
+      paths.reverse();
       let foundCommand = false;
 
       for (const path of paths) {
