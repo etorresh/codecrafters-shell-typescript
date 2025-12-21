@@ -51,9 +51,7 @@ while (true) {
                 console.log(`${args[0]} is ${full_path}`)
                 foundCommand = true;
                 break;
-              } catch {
-                console.log("can't execute");
-              }
+              } catch {}
             }
           }
         } catch {}
