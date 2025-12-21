@@ -47,7 +47,7 @@ while (true) {
             if (file === args[0]) {
               try {
                 await access(path, constants.X_OK);
-                console.log(`${args[0]} command is ${path}`)
+                console.log(`${args[0]} command is ${path}${sep}${args[0]}`)
                 foundCommand = true;
                 break;
               } catch {
