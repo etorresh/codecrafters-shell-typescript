@@ -38,6 +38,7 @@ while (true) {
       let foundCommand = false;
 
       for (const path of paths) {
+        console.log(path);
         if (foundCommand) {
           break;
         }
