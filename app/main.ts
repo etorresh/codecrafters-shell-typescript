@@ -31,11 +31,11 @@ while (true) {
     if (isCommand(args[0])) {
       console.log(`${args[0]} is a shell builtin`);
     } else {[
-      console.log(`${args[0]}: command not found`)
+      console.log(`${args[0]}: not found`)
     ]}
   }
   else {
-    console.log(`${command}: not found`); // process.stdout.write(command + ": command not found\n");
+    console.log(`${command}: command not found`); // process.stdout.write(command + ": command not found\n");
   }
 }
 rl.close();
