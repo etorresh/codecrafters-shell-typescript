@@ -35,7 +35,7 @@ while (true) {
     ]}
   }
   else {
-    console.log(`${command}: command not found`); // process.stdout.write(command + ": command not found\n");
+    console.log(`${command}: not found`); // process.stdout.write(command + ": command not found\n");
   }
 }
 rl.close();
