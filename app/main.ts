@@ -1,4 +1,6 @@
-import { createInterface } from "readline/promises";
+import { createInterface } from "node:readline/promises";
+import { access, constants } from "node:fs/promises";
+import { delimiter, sep } from "node:path";
 
 const rl = createInterface({
   input: process.stdin,
@@ -30,9 +32,28 @@ while (true) {
   else if(command === Commands.TYPE) {
     if (isCommand(args[0])) {
       console.log(`${args[0]} is a shell builtin`);
-    } else {[
-      console.log(`${args[0]}: not found`)
-    ]}
+    } 
+    else {
+      const paths = process.env.PATH?.split(delimiter) ?? [];
+      let foundCommand = false;
+      for (const path of paths) {
+        const components = path.split(sep);
+        const last_component = components[components.length - 1];
+        if (args[0] === last_component) {
+          try {
+            await access(path, constants.X_OK);
+            console.log(`${args[0]} command is ${path}`)
+            foundCommand = true;
+            break;
+          } catch {
+            console.log("can't execute");
+          }
+        }
+      }
+      if (!foundCommand) {
+        console.log(`${args[0]}: not found`)
+      }
+    }
   }
   else {
     console.log(`${command}: command not found`); // process.stdout.write(command + ": command not found\n");
