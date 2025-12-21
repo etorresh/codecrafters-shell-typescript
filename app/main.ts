@@ -10,7 +10,12 @@ const Commands = {
   ECHO: "echo",
   TYPE: "type",
 } as const;
+type Command = typeof Commands[keyof typeof Commands];
 const CommandsValues = new Set(Object.values(Commands));
+
+function isCommand(value: string): value is Command {
+  return CommandsValues.has(value as Command);
+}
 
 while (true) {
   const input = await rl.question("$ ");
@@ -23,7 +28,7 @@ while (true) {
     console.log(args.join(" "));
   }
   else if(command === Commands.TYPE) {
-    if (CommandsValues.has(command)) {
+    if (isCommand(args[0])) {
       console.log(`${args[0]} is a shell builtin`);
     } else {[
       console.log(`${args[0]}: command not found`)
