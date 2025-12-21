@@ -39,6 +39,7 @@ while (true) {
       for (const path of paths) {
         const components = path.split(sep);
         const last_component = components[components.length - 1];
+        console.log(path);
         if (args[0] === last_component) {
           try {
             await access(path, constants.X_OK);
