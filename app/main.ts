@@ -1,5 +1,5 @@
 import { createInterface } from "node:readline/promises";
-import { access, constants } from "node:fs/promises";
+import { access, constants, readdir } from "node:fs/promises";
 import { delimiter, sep } from "node:path";
 
 const rl = createInterface({
@@ -36,20 +36,26 @@ while (true) {
     else {
       const paths = process.env.PATH?.split(delimiter) ?? [];
       let foundCommand = false;
+
       for (const path of paths) {
-        const components = path.split(sep);
-        const last_component = components[components.length - 1];
-        console.log(path);
-        if (args[0] === last_component) {
-          try {
-            await access(path, constants.X_OK);
-            console.log(`${args[0]} command is ${path}`)
-            foundCommand = true;
-            break;
-          } catch {
-            console.log("can't execute");
-          }
+        if (foundCommand) {
+          break;
         }
+        try {
+          const files = await readdir(path);
+          for (const file of files) {
+            if (file === args[0]) {
+              try {
+                await access(path, constants.X_OK);
+                console.log(`${args[0]} command is ${path}`)
+                foundCommand = true;
+                break;
+              } catch {
+                console.log("can't execute");
+              }
+            }
+          }
+        } catch {}
       }
       if (!foundCommand) {
         console.log(`${args[0]}: not found`)
