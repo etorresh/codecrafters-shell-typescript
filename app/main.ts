@@ -7,5 +7,6 @@ const rl = createInterface({
 
 // TODO: Uncomment the code below to pass the first stage
 const command = await rl.question("$ ");
-process.stdout.write(command + ": command not found\n");
+console.log(`${command}: command not found`)
+// process.stdout.write(command + ": command not found\n");
 rl.close();
