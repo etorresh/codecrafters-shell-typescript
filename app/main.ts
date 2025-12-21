@@ -7,5 +7,9 @@ const rl = createInterface({
 
 while (true) {
   const command = await rl.question("$ ");
+  if (command == "exit") {
+    break;
+  }
   console.log(`${command}: command not found`); // process.stdout.write(command + ": command not found\n");
 }
+rl.close();
