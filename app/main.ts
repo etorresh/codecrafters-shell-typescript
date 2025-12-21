@@ -35,7 +35,6 @@ while (true) {
     } 
     else {
       const paths = process.env.PATH?.split(delimiter) ?? [];
-      paths.reverse();
       let foundCommand = false;
 
       for (const path of paths) {
@@ -47,8 +46,9 @@ while (true) {
           for (const file of files) {
             if (file === args[0]) {
               try {
-                await access(path, constants.X_OK);
-                console.log(`${args[0]} is ${path}${sep}${args[0]}`)
+                const full_path = `${path}${sep}${args[0]}`;
+                await access(full_path, constants.X_OK);
+                console.log(`${args[0]} is ${full_path}`)
                 foundCommand = true;
                 break;
               } catch {
