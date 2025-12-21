@@ -1,4 +1,4 @@
-import { createInterface } from "readline";
+import { createInterface } from "readline/promises";
 
 const rl = createInterface({
   input: process.stdin,
@@ -6,6 +6,6 @@ const rl = createInterface({
 });
 
 // TODO: Uncomment the code below to pass the first stage
-rl.question("$ ", (answer) => {
-  rl.close();
-});
+const command = await rl.question("$ ");
+process.stdout.write(command + ": command not found\n");
+rl.close();
