@@ -66,8 +66,6 @@ while (true) {
   }
   args.push(arg.join(""));
 
-  console.log(args);
-
   if (command === Commands.EXIT) {
     break;
   }
