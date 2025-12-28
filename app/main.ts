@@ -55,14 +55,18 @@ while (true) {
       special = !special;
     }
     else if (ch === " " && !special) {
+      if (arg.length > 0) {
         args.push(arg.join(""));
         arg = [];
+      }
     }
     else {
       arg.push(ch);
     }
   }
   args.push(arg.join(""));
+
+  console.log(args);
 
   if (command === Commands.EXIT) {
     break;
