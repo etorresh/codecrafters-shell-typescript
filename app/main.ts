@@ -16,11 +16,11 @@ const Commands = {
   ECHO: "echo",
   TYPE: "type",
 } as const;
-type Command = typeof Commands[keyof typeof Commands];
+type Command = (typeof Commands)[keyof typeof Commands];
 const CommandsValues = new Set(Object.values(Commands));
 
 function isCommand(value: string): value is Command {
-  return CommandsValues.has(value as Command);
+  return CommandsValues.has(value as any);
 }
 
 async function find_path(target: string): Promise<string | null> {
@@ -44,8 +44,26 @@ async function find_path(target: string): Promise<string | null> {
 
 while (true) {
   const input = await rl.question("$ ");
-  const args = input.split(" ");
-  const command = args.splice(0, 1)[0];
+  const first_space = input.indexOf(" ");
+  const command = first_space === -1 ? input : input.slice(0, first_space);
+  const args_raw = first_space === -1 ? "" : input.slice(first_space + 1);
+  let args: string[] = [];
+  let arg: string[] = [];
+  let special = false;
+  for (let ch of args_raw) {
+    if (ch === "'") {
+      special = !special;
+    }
+    else if (ch === " " && !special) {
+        args.push(arg.join(""));
+        arg = [];
+    }
+    else {
+      arg.push(ch);
+    }
+  }
+  args.push(arg.join(""));
+
   if (command === Commands.EXIT) {
     break;
   }
