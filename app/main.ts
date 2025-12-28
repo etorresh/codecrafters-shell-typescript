@@ -42,19 +42,18 @@ async function find_path(target: string): Promise<string | null> {
   return null;
 }
 
-while (true) {
-  const input = await rl.question("$ ");
-  const first_space = input.indexOf(" ");
-  const command = first_space === -1 ? input : input.slice(0, first_space);
-  const args_raw = first_space === -1 ? "" : input.slice(first_space + 1);
+function parse_args(args_raw: string): string[] {
   let args: string[] = [];
   let arg: string[] = [];
-  let special = false;
+  let specialChar: "'" | '"' | null = null;
   for (let ch of args_raw) {
-    if (ch === "'") {
-      special = !special;
+    if (ch === specialChar) {
+      specialChar = null;
     }
-    else if (ch === " " && !special) {
+    else if ((ch === "'" || ch === '"') && specialChar === null) {
+      specialChar = ch;
+    }
+    else if (ch === " " && specialChar === null) {
       if (arg.length > 0) {
         args.push(arg.join(""));
         arg = [];
@@ -65,6 +64,15 @@ while (true) {
     }
   }
   args.push(arg.join(""));
+  return args;
+}
+
+while (true) {
+  const input = await rl.question("$ ");
+  const first_space = input.indexOf(" ");
+  const command = first_space === -1 ? input : input.slice(0, first_space);
+  const args_raw = first_space === -1 ? "" : input.slice(first_space + 1);
+  const args = parse_args(args_raw);
 
   if (command === Commands.EXIT) {
     break;
@@ -85,12 +93,12 @@ while (true) {
     }
   }
   else {
-    const path = await find_path(command); // we're reusing find_path but we should try to run the file directly as this can cause a data race if we assume there are no changes between checking permissions and executing
+    const path = await find_path(command); // I'm reusing find_path but should try to run the file directly as this can cause a data race if I assume there are no changes between checking permissions and executing
     if (path) {
       const { stdout, stderr} = await execFileAsync(command, args);
       process.stdout.write(stdout);
     } else {
-      console.log(`${command}: command not found`); // process.stdout.write(command + ": command not found\n");
+      console.log(`${command}: command not found`);
     }
   }
 }
