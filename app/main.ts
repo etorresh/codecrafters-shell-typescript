@@ -46,14 +46,18 @@ function parse_args(args_raw: string): string[] {
   let args: string[] = [];
   let arg: string[] = [];
   let specialChar: "'" | '"' | null = null;
+  let escape = false
   for (let ch of args_raw) {
-    if (ch === specialChar) {
+    if (!escape && ch === "\\" && specialChar == null) {
+      escape = true;
+    }
+    else if (!escape && ch === specialChar) {
       specialChar = null;
     }
-    else if ((ch === "'" || ch === '"') && specialChar === null) {
+    else if (!escape && (ch === "'" || ch === '"') && specialChar === null) {
       specialChar = ch;
     }
-    else if (ch === " " && specialChar === null) {
+    else if (!escape && ch === " " && specialChar === null) {
       if (arg.length > 0) {
         args.push(arg.join(""));
         arg = [];
@@ -61,6 +65,7 @@ function parse_args(args_raw: string): string[] {
     }
     else {
       arg.push(ch);
+      escape = false;
     }
   }
   args.push(arg.join(""));
