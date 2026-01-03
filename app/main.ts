@@ -48,16 +48,23 @@ function parse_args(args_raw: string): string[] {
   let specialChar: "'" | '"' | null = null;
   let escape = false
   for (let ch of args_raw) {
-    if (!escape && ch === "\\" && specialChar == null) {
+    if (escape) {
+      if (specialChar === '"' && !(['"', "\\", "$", "`"].includes(ch))) {
+        arg.push("\\");
+      }
+      arg.push(ch);
+      escape = false;
+    }
+    else if (ch === "\\" && specialChar != "'" ) {
       escape = true;
     }
-    else if (!escape && ch === specialChar) {
+    else if (ch === specialChar) {
       specialChar = null;
     }
-    else if (!escape && (ch === "'" || ch === '"') && specialChar === null) {
+    else if ((ch === "'" || ch === '"') && specialChar === null) {
       specialChar = ch;
     }
-    else if (!escape && ch === " " && specialChar === null) {
+    else if (ch === " " && specialChar === null) {
       if (arg.length > 0) {
         args.push(arg.join(""));
         arg = [];
@@ -65,7 +72,6 @@ function parse_args(args_raw: string): string[] {
     }
     else {
       arg.push(ch);
-      escape = false;
     }
   }
   args.push(arg.join(""));
