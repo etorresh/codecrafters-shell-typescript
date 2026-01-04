@@ -42,7 +42,7 @@ async function find_path(target: string): Promise<string | null> {
   return null;
 }
 
-function parse_args(args_raw: string): string[] {
+function parse(args_raw: string): string[] {
   let args: string[] = [];
   let arg: string[] = [];
   let specialChar: "'" | '"' | null = null;
@@ -80,10 +80,10 @@ function parse_args(args_raw: string): string[] {
 
 while (true) {
   const input = await rl.question("$ ");
-  const first_space = input.indexOf(" ");
-  const command = first_space === -1 ? input : input.slice(0, first_space);
-  const args_raw = first_space === -1 ? "" : input.slice(first_space + 1);
-  const args = parse_args(args_raw);
+  const input_parsed = parse(input);
+  const command = input_parsed[0];
+  const args = input_parsed.slice(1, input_parsed.length);
+
 
   if (command === Commands.EXIT) {
     break;
