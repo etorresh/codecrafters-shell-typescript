@@ -145,8 +145,9 @@ while (true) {
     const path = await find_path(command); // I'm reusing find_path but should try to run the file directly as this can cause a data race if I assume there are no changes between checking permissions and executing
     if (path) {
       const { stdout, stderr} = await execFileAsync(command, args);
-      await outputManager.print(stdout);
-      if (stderr.length > 0) {
+      if (stderr.length == 0) {
+        await outputManager.print(stdout);
+      } else {
         console.log(stderr);
       }
     } else {
