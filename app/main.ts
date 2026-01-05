@@ -97,7 +97,10 @@ class OutputManager {
 
   async print(output: string) {
     if (this.redirectionPath === null) {
-      console.log(output);
+      if (!output.endsWith("\n")) {
+        output += "\n";
+      }
+      process.stdout.write(output);
     } else {
       if (!(await exists(this.redirectionPath))) {
         const path = this.redirectionPath.split(sep);
