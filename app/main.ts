@@ -73,7 +73,7 @@ function parse(input: string): [string[], string | null] {
       }
     }
     else if (ch === ">" && specialChar === null) {
-      if (!(currentChunk.length === 1 && currentChunk[currentChunk.length - 1] === "1")) {
+      if (currentChunk.length > 0 && !(currentChunk.length === 1 && currentChunk[currentChunk.length - 1] === "1")) {
         writingTo.push(currentChunk.join(""));
       }
       currentChunk = [];
@@ -95,7 +95,7 @@ class OutputManager {
     this.redirectionPath = redirectionPath;
   }
 
-  async print(output: string): void {
+  async print(output: string) {
     if (this.redirectionPath === null) {
       console.log(output);
     } else {
@@ -103,7 +103,8 @@ class OutputManager {
         const path = this.redirectionPath.split(sep);
         const folderPath = path.slice(0, path.length - 1);
         if (folderPath.length > 0) {
-          await mkdir(folderPath.join(sep), {recursive: true});
+          const folderPathString = folderPath.join(sep);
+          await mkdir(folderPathString, {recursive: true});
         }
       }
       await writeFile(this.redirectionPath, output);
@@ -142,7 +143,9 @@ while (true) {
     if (path) {
       const { stdout, stderr} = await execFileAsync(command, args);
       await outputManager.print(stdout);
-      console.log(stderr);
+      if (stderr.length > 0) {
+        console.log(stderr);
+      }
     } else {
       await outputManager.print(`${command}: command not found`);
     }
