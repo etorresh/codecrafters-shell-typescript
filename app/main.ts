@@ -146,13 +146,11 @@ while (true) {
     if (path) {
       try {
         const { stdout, stderr} = await execFileAsync(command, args);
-        if (stderr.length === 0) {
-          await outputManager.print(stdout);
-        } else {
-          process.stdout.write(stderr);
-        }
+        await outputManager.print(stdout);
+        process.stdout.write(stderr);
       } catch (err) {
-        const e = err as {stderr: string};
+        const e = err as {stdout: string, stderr: string};
+        await outputManager.print(e.stdout);
         process.stdout.write(e.stderr);
       }
     } else {
