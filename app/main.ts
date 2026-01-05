@@ -1,5 +1,5 @@
 import { createInterface } from "node:readline/promises";
-import { access, constants, readdir } from "node:fs/promises";
+import { access, constants, readdir, writeFile } from "node:fs/promises";
 import { delimiter, sep } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -42,17 +42,19 @@ async function find_path(target: string): Promise<string | null> {
   return null;
 }
 
-function parse(args_raw: string): string[] {
-  let args: string[] = [];
-  let arg: string[] = [];
+function parse(input: string): [string[], string | null] {
+  const parsedInput: string[] = [];
+  let currentChunk: string[] = [];
   let specialChar: "'" | '"' | null = null;
   let escape = false
-  for (let ch of args_raw) {
+  let redirection: string[] | null = null;
+  let writingTo = parsedInput;
+  for (let ch of input) {
     if (escape) {
       if (specialChar === '"' && !(['"', "\\", "$", "`"].includes(ch))) {
-        arg.push("\\");
+        currentChunk.push("\\");
       }
-      arg.push(ch);
+      currentChunk.push(ch);
       escape = false;
     }
     else if (ch === "\\" && specialChar != "'" ) {
@@ -65,41 +67,66 @@ function parse(args_raw: string): string[] {
       specialChar = ch;
     }
     else if (ch === " " && specialChar === null) {
-      if (arg.length > 0) {
-        args.push(arg.join(""));
-        arg = [];
+      if (currentChunk.length > 0) {
+        writingTo.push(currentChunk.join(""));
+        currentChunk = [];
       }
     }
+    else if (ch === ">" && specialChar === null) {
+      if (!(currentChunk.length === 1 && currentChunk[currentChunk.length - 1] === "1")) {
+        writingTo.push(currentChunk.join(""));
+      }
+      currentChunk = [];
+      redirection = [];
+      writingTo = redirection;
+    }
     else {
-      arg.push(ch);
+      currentChunk.push(ch);
     }
   }
-  args.push(arg.join(""));
-  return args;
+  writingTo.push(currentChunk.join(""));
+  const redirectionPath = redirection === null ? null: redirection.join("");
+  return [parsedInput, redirectionPath];
+}
+
+class OutputManager {
+  redirectionPath: string | null;
+  constructor(redirectionPath: string | null) {
+    this.redirectionPath = redirectionPath;
+  }
+
+  async print(output: string): void {
+    if (this.redirectionPath === null) {
+      console.log(output);
+    } else {
+      await writeFile(this.redirectionPath, output);
+    }
+  }
 }
 
 while (true) {
   const input = await rl.question("$ ");
-  const input_parsed = parse(input);
-  const command = input_parsed[0];
-  const args = input_parsed.slice(1, input_parsed.length);
+  const [parsedInput, redirectionPath] = parse(input);
+  const command = parsedInput[0];
+  const args = parsedInput.slice(1, parsedInput.length);
+  const outputManager = new OutputManager(redirectionPath);
 
 
   if (command === Commands.EXIT) {
     break;
   }
   else if (command === Commands.ECHO) {
-    console.log(args.join(" "));
+    await outputManager.print(args.join(" "));
   }
   else if(command === Commands.TYPE) {
     if (isCommand(args[0])) {
-      console.log(`${args[0]} is a shell builtin`);
+      await outputManager.print(`${args[0]} is a shell builtin`);
     } else {
       const path = await find_path(args[0]); 
       if (path) {
-        console.log(`${args[0]} is ${path}`);
+        await outputManager.print(`${args[0]} is ${path}`);
       } else {
-        console.log(`${args[0]}: not found`);
+        await outputManager.print(`${args[0]}: not found`);
       }
     }
   }
@@ -107,9 +134,10 @@ while (true) {
     const path = await find_path(command); // I'm reusing find_path but should try to run the file directly as this can cause a data race if I assume there are no changes between checking permissions and executing
     if (path) {
       const { stdout, stderr} = await execFileAsync(command, args);
-      process.stdout.write(stdout);
+      await outputManager.print(stdout);
+      console.log(stderr);
     } else {
-      console.log(`${command}: command not found`);
+      await outputManager.print(`${command}: command not found`);
     }
   }
 }
