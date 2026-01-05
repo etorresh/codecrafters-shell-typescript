@@ -1,5 +1,5 @@
 import { createInterface } from "node:readline/promises";
-import { access, constants, readdir, writeFile } from "node:fs/promises";
+import { access, constants, readdir, writeFile, exists, mkdir } from "node:fs/promises";
 import { delimiter, sep } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -99,6 +99,13 @@ class OutputManager {
     if (this.redirectionPath === null) {
       console.log(output);
     } else {
+      if (!(await exists(this.redirectionPath))) {
+        const path = this.redirectionPath.split(sep);
+        const folderPath = path.slice(0, path.length - 1);
+        if (folderPath.length > 0) {
+          await mkdir(folderPath.join(sep), {recursive: true});
+        }
+      }
       await writeFile(this.redirectionPath, output);
     }
   }
