@@ -43,14 +43,32 @@ async function find_path(target: string): Promise<string | null> {
   return null;
 }
 
-function parse(input: string): [string[], number, string | null] {
+
+const Outputs = {
+  ">": "1>",
+  "1>": "1>",
+  "2>": "2>",
+  ">>": "1>>",
+  "1>>": "1>>",
+  "2>>": "2>>"
+} as const;
+
+type OutputKey = keyof typeof Outputs;
+type Output = typeof Outputs[OutputKey] | null;
+const OutputKeys = new Set<OutputKey>(Object.keys(Outputs) as OutputKey[]);
+
+function isOutputKey(value: string): value is OutputKey {
+  return OutputKeys.has(value as any);
+}
+
+function parse(input: string): [string[], Output, string | null] {
   const parsedInput: string[] = [];
   let currentChunk: string[] = [];
   let specialChar: "'" | '"' | null = null;
   let escape = false
   let redirection: string[] | null = null;
   let writingTo = parsedInput;
-  let outputType = 0;
+  let outputType: Output = null;
   for (let ch of input) {
     if (escape) {
       if (specialChar === '"' && !(['"', "\\", "$", "`"].includes(ch))) {
@@ -70,21 +88,16 @@ function parse(input: string): [string[], number, string | null] {
     }
     else if (ch === " " && specialChar === null) {
       if (currentChunk.length > 0) {
-        writingTo.push(currentChunk.join(""));
+        const currentChunkString = currentChunk.join("");
+        if (isOutputKey(currentChunkString)) {
+          outputType = Outputs[currentChunkString];
+          redirection = [];
+          writingTo = redirection;
+        } else {
+          writingTo.push(currentChunkString);
+        }
         currentChunk = [];
       }
-    }
-    else if (ch === ">" && specialChar === null) {
-      if (currentChunk.length === 0) {
-        outputType = 1;
-      } else if (currentChunk.length === 1 && ["1", "2"].includes(currentChunk[0])) {
-        outputType = parseInt(currentChunk[0]); 
-      } else if (currentChunk.length > 0) {
-        writingTo.push(currentChunk.join(""));
-      }
-      currentChunk = [];
-      redirection = [];
-      writingTo = redirection;
     }
     else {
       currentChunk.push(ch);
@@ -95,48 +108,48 @@ function parse(input: string): [string[], number, string | null] {
   return [parsedInput, outputType, redirectionPath];
 }
 
-type OutputConfig = 
-  | { outputType: 0; redirectionPath: null}
-  | { outputType: 1 | 2; redirectionPath: string};
+type OutputConfig =
+  | [ outputType: null, redirectionPath: null]
+  | [ outputType: Output, redirectionPath: string];
 class OutputManager {
   outputConfig: OutputConfig;
-  constructor(outputType: number, redirectionPath: string | null) {
-    if (outputType === 0 && redirectionPath === null) {
-      this.outputConfig = {outputType, redirectionPath};
-    } else if ((outputType === 1 || outputType === 2) && redirectionPath != null) {
-      this.outputConfig = {outputType, redirectionPath};
-    } else {
-      throw new Error("outputType must be 0, 1, or 2. redirectionPath can not be null when outputType === (1 | 2)");
-    }
+  constructor(config: OutputConfig) {
+    this.outputConfig = config;
   }
 
   async print(stdout: string, stderr: string = "") {
+    // interesting article on stdio buffering https://www.pixelbeat.org/programming/stdio_buffering/
     if (stdout.length > 0 && !stdout.endsWith("\n")) {
       stdout += "\n";
     }
     if (stderr.length > 0 && !stderr.endsWith("\n")) {
       stderr += "\n";
     }
-
-    if (this.outputConfig.outputType === 0) {
+    const [outputType, redirectionPath] = this.outputConfig;
+    if (outputType === null) {
       process.stdout.write(stdout);
     } else {
-      if (!(await exists(this.outputConfig.redirectionPath))) {
-        const path = this.outputConfig.redirectionPath.split(sep);
+      if (!(await exists(redirectionPath))) {
+        const path = redirectionPath.split(sep);
         const folderPath = path.slice(0, path.length - 1);
         if (folderPath.length > 0) {
           const folderPathString = folderPath.join(sep);
           await mkdir(folderPathString, {recursive: true});
         }
       }
-      if (this.outputConfig.outputType === 1) {
-        await writeFile(this.outputConfig.redirectionPath, stdout);
-        process.stdout.write(stderr);
-      } else if (this.outputConfig.outputType === 2) {
-        await writeFile(this.outputConfig.redirectionPath, stderr);
-        process.stdout.write(stdout);
+      let toFile = stdout;
+      let toConsole = stderr;
+      if (outputType === Outputs["2>"] || outputType === Outputs["2>>"]) {
+        toFile = stderr;
+        toConsole = stdout;
       }
-    }
+      process.stdout.write(toConsole);
+      let writeFlag = "w";
+      if (outputType === Outputs["1>>"] || outputType === Outputs["2>>"]) {
+          writeFlag = "a";
+        }
+      await writeFile(redirectionPath, toFile, {flag: writeFlag});
+      }
   }
 }
 
@@ -145,8 +158,13 @@ while (true) {
   const [parsedInput, outputType, redirectionPath] = parse(input);
   const command = parsedInput[0];
   const args = parsedInput.slice(1, parsedInput.length);
-  const outputManager = new OutputManager(outputType, redirectionPath);
-
+  let outputManager;
+  if (outputType !== null && redirectionPath !== null) {
+    outputManager = new OutputManager([outputType, redirectionPath]);
+  } else {
+    outputManager = new OutputManager([null, null]);
+  }
+  
   if (command === Commands.EXIT) {
     break;
   }
@@ -179,7 +197,7 @@ while (true) {
         stdout = e.stdout;
         stderr = e.stderr;
       }
-      await outputManager.print(stdout, stderr); // to do: create a function to normalize stdout/stderr for line  buffering as if it doesn't have \n then it doesn't print. Interesting article on it https://www.pixelbeat.org/programming/stdio_buffering/
+      await outputManager.print(stdout, stderr);
     } else {
       await outputManager.print(`${command}: command not found`);
     }
