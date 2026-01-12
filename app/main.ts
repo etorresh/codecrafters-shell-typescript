@@ -114,6 +114,9 @@ class OutputManager {
   }
 
   async print(stdout: string, stderr: string = "") {
+    if (stdout === undefined || stderr === undefined) {
+      console.log("undefined");
+    }
     // interesting article on stdio buffering https://www.pixelbeat.org/programming/stdio_buffering/
     if (stdout.length > 0 && !stdout.endsWith("\n")) {
       stdout += "\n";
@@ -210,7 +213,7 @@ function autocomplete(line: string[]): string | null {
 let line: string[] = [];
 process.stdout.write("$ ");
 async function handleKeypress(str: string, key: any) {
-  if(key.name === "return") {
+  if(key.name === "return" || key.name === "enter") { // I originally only had "return" and it was a pain finding that the test runner passes "enter"
     process.stdout.write("\n");
     await processLine(line.join(""));
     process.stdout.write("$ ");
@@ -226,7 +229,7 @@ async function handleKeypress(str: string, key: any) {
       line.pop();
       process.stdout.write("\b \b");
     }
-  } else {
+  } else if(key.sequence.length === 1) {
     line.push(str);
     process.stdout.write(str);
   }
@@ -235,6 +238,8 @@ async function handleKeypress(str: string, key: any) {
 readline.emitKeypressEvents(stdin);
 if (process.stdin.isTTY) {
   process.stdin.setRawMode(true);
+} else {
+  console.log("NO TTY");
 }
 process.stdin.on("keypress", handleKeypress);
 
