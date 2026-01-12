@@ -169,7 +169,7 @@ for (const path of paths) {
   try {
     const files = await readdir(path);
     for (const file of files) {
-        const full_path = `${path}${sep}${file}`; // check if it's a dir vs executable (or is this out of scope for CodeCrafters?)
+        const full_path = `${path}${sep}${file}`; // TO DO: check if it's a dir or executable
         commands.push(file);
       }
     } catch {}
@@ -186,6 +186,16 @@ for (let command of commands) {
   }
   node.isWord = true;
 }
+
+let lastStdoutMessage = "";
+const originalWrite = process.stdout.write.bind(process.stdout);
+process.stdout.write = (
+  chunk: string | Uint8Array,
+  ...args: any[]
+): boolean => {
+  lastStdoutMessage = chunk.toString();
+  return originalWrite(chunk, ...args);
+};
 
 function autocomplete(line: string[]): string | null {
   if (line.length === 0) {
@@ -209,10 +219,12 @@ function autocomplete(line: string[]): string | null {
   while(true) {
     let noChildrenLeft = true;
     for (const key in node.children) {
+      if (!noChildrenLeft) {
+        return null;
+      }
       noChildrenLeft = false;
       autocompleteBuilder.push(key);
       node = node.children[key];
-      break;
     }
     if (noChildrenLeft) {
       break;
@@ -232,12 +244,38 @@ async function handleKeypress(str: string, key: any) {
     process.stdout.write("$ ");
     line = [];
   } else if (key.name === "tab") {
-    const autocompleteString = autocomplete(line);
-    if (autocompleteString === null)  {
-      process.stdout.write("\x07");
+    if (lastStdoutMessage === "\x07") {
+      let startingNode = commandsTrie;
+      for (let ch of line) {
+        startingNode = startingNode.children[ch];
+      }
+      const stack: [Trie, string][] = [[startingNode, line.join("")]];
+      const availableCommands: string[] = [];
+      while (stack.length > 0) {
+        const [node, fileNameBuilder] = stack.pop()!;
+        if (node.isWord) {
+          availableCommands.push(fileNameBuilder);
+        }
+        for (let ch of "abcdefghijklmnopqrstuvwxyz") {
+          if (ch in node.children) {
+            stack.push([node.children[ch], fileNameBuilder + ch])
+          }
+        }
+      }
+      if (availableCommands.length > 0) {
+        process.stdout.write("\n");
+        process.stdout.write(availableCommands.join("  "));
+        process.stdout.write("\n");
+        process.stdout.write(`$ ${line.join("")}`);
+      }
     } else {
-      process.stdout.write(autocompleteString);
-      line.push(...autocompleteString);
+      const autocompleteString = autocomplete(line);
+      if (autocompleteString === null)  {
+        process.stdout.write("\x07");
+      } else {
+        process.stdout.write(autocompleteString);
+        line.push(...autocompleteString);
+      }
     }
   } else if (key.name === "backspace") {
     if (line.length > 0) {
