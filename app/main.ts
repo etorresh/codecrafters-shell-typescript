@@ -1,16 +1,12 @@
-import { createInterface } from "node:readline/promises";
+import { createInterface, Readline } from "node:readline/promises";
 import { access, constants, readdir, writeFile, exists, mkdir } from "node:fs/promises";
 import { delimiter, sep } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { error } from "node:console";
+import readline from 'node:readline';
+import { stdin } from "node:process";
 
 const execFileAsync = promisify(execFile);
-
-const rl = createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
 
 const Commands = {
   EXIT: "exit",
@@ -153,9 +149,97 @@ class OutputManager {
   }
 }
 
-while (true) {
-  const input = await rl.question("$ ");
-  const [parsedInput, outputType, redirectionPath] = parse(input);
+class Trie {
+  children: {[key: string]: Trie};
+  isWord: boolean;
+  constructor() {
+    this.children = {};
+    this.isWord = false;
+  }
+
+}
+
+const commandsTrie= new Trie();
+for (let command of ["echo", "exit"]) {
+  let node = commandsTrie;
+  for (let ch of command) {
+    if (!(ch in node.children)) {
+      node.children[ch] = new Trie(); 
+    }
+    node = node.children[ch];
+  }
+  node.isWord = true;
+}
+
+function autocomplete(line: string[]): string | null {
+  if (line.length === 0) {
+    return null;
+  }
+  const lineString = line.join("").split(" ");
+  const lastWord = lineString.at(-1);
+  if (lastWord === undefined) {
+    return null;
+  }
+
+  let node = commandsTrie;
+  for (let ch of lastWord) {
+    if (ch in node.children) {
+      node = node.children[ch]
+    } else {
+      return null;
+    }
+  }
+  let autocompleteBuilder: string[] = [];
+  while(true) {
+    let noChildrenLeft = true;
+    for (const key in node.children) {
+      noChildrenLeft = false;
+      autocompleteBuilder.push(key);
+      node = node.children[key];
+      break;
+    }
+    if (noChildrenLeft) {
+      break;
+    }
+  }
+  autocompleteBuilder.push(" ");
+  return autocompleteBuilder.join(""); 
+
+}
+
+let line: string[] = [];
+process.stdout.write("$ ");
+async function handleKeypress(str: string, key: any) {
+  if(key.name === "return") {
+    process.stdout.write("\n");
+    await processLine(line.join(""));
+    process.stdout.write("$ ");
+    line = [];
+  } else if (key.name === "tab") {
+    const autocompleteString = autocomplete(line);
+    if (autocompleteString !== null)  {
+      process.stdout.write(autocompleteString);
+      line.push(...autocompleteString);
+    }
+  } else if (key.name === "backspace") {
+    if (line.length > 0) {
+      line.pop();
+      process.stdout.write("\b \b");
+    }
+  } else {
+    line.push(str);
+    process.stdout.write(str);
+  }
+}
+
+readline.emitKeypressEvents(stdin);
+if (process.stdin.isTTY) {
+  process.stdin.setRawMode(true);
+}
+process.stdin.on("keypress", handleKeypress);
+
+async function processLine(line: string) {
+  const [parsedInput, outputType, redirectionPath] = parse(line);
   const command = parsedInput[0];
   const args = parsedInput.slice(1, parsedInput.length);
   let outputManager;
@@ -166,7 +250,7 @@ while (true) {
   }
   
   if (command === Commands.EXIT) {
-    break;
+    process.exit();
   }
   else if (command === Commands.ECHO) {
     await outputManager.print(args.join(" "));
@@ -203,4 +287,3 @@ while (true) {
     }
   }
 }
-rl.close();
