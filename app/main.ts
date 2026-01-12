@@ -201,6 +201,7 @@ function autocomplete(line: string[]): string | null {
   if (line.length === 0) {
     return null;
   }
+
   const lineString = line.join("").split(" ");
   const lastWord = lineString.at(-1);
   if (lastWord === undefined) {
@@ -215,11 +216,12 @@ function autocomplete(line: string[]): string | null {
       return null;
     }
   }
+
   let autocompleteBuilder: string[] = [];
   while(true) {
     let noChildrenLeft = true;
     for (const key in node.children) {
-      if (!noChildrenLeft) {
+      if (!noChildrenLeft) {;
         return null;
       }
       noChildrenLeft = false;
@@ -263,6 +265,7 @@ async function handleKeypress(str: string, key: any) {
         }
       }
       if (availableCommands.length > 0) {
+        availableCommands.reverse();
         process.stdout.write("\n");
         process.stdout.write(availableCommands.join("  "));
         process.stdout.write("\n");
