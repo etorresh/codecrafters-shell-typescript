@@ -220,7 +220,9 @@ async function handleKeypress(str: string, key: any) {
     line = [];
   } else if (key.name === "tab") {
     const autocompleteString = autocomplete(line);
-    if (autocompleteString !== null)  {
+    if (autocompleteString === null)  {
+      process.stdout.write("\x07");
+    } else {
       process.stdout.write(autocompleteString);
       line.push(...autocompleteString);
     }
@@ -239,7 +241,7 @@ readline.emitKeypressEvents(stdin);
 if (process.stdin.isTTY) {
   process.stdin.setRawMode(true);
 } else {
-  console.log("NO TTY");
+  console.log("No TTY");
 }
 process.stdin.on("keypress", handleKeypress);
 
