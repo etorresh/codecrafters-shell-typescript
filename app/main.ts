@@ -162,8 +162,21 @@ class Trie {
 
 }
 
+
+let commands = ["echo", "exit"];
+const paths = process.env.PATH?.split(delimiter) ?? [];
+for (const path of paths) {
+  try {
+    const files = await readdir(path);
+    for (const file of files) {
+        const full_path = `${path}${sep}${file}`; // check if it's a dir vs executable (or is this out of scope for CodeCrafters?)
+        commands.push(file);
+      }
+    } catch {}
+}
+
 const commandsTrie= new Trie();
-for (let command of ["echo", "exit"]) {
+for (let command of commands) {
   let node = commandsTrie;
   for (let ch of command) {
     if (!(ch in node.children)) {
