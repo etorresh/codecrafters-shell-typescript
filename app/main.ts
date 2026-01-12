@@ -1,4 +1,3 @@
-import { createInterface, Readline } from "node:readline/promises";
 import { access, constants, readdir, writeFile, exists, mkdir } from "node:fs/promises";
 import { delimiter, sep } from "node:path";
 import { execFile } from "node:child_process";
@@ -159,9 +158,7 @@ class Trie {
     this.children = {};
     this.isWord = false;
   }
-
 }
-
 
 let commands = ["echo", "exit"];
 const paths = process.env.PATH?.split(delimiter) ?? [];
@@ -169,13 +166,13 @@ for (const path of paths) {
   try {
     const files = await readdir(path);
     for (const file of files) {
-        const full_path = `${path}${sep}${file}`; // TO DO: check if it's a dir or executable
+        // const full_path = `${path}${sep}${file}`; TO DO: check if it's a dir or executable
         commands.push(file);
       }
     } catch {}
 }
 
-const commandsTrie= new Trie();
+const commandsTrie = new Trie();
 for (let command of commands) {
   let node = commandsTrie;
   for (let ch of command) {
@@ -217,24 +214,22 @@ function autocomplete(line: string[]): string | null {
     }
   }
 
+  const startingNode = node;
+
   let autocompleteBuilder: string[] = [];
-  while(true) {
-    let noChildrenLeft = true;
+  while(!node.isWord && Object.keys(node.children).length === 1) {
     for (const key in node.children) {
-      if (!noChildrenLeft) {;
-        return null;
-      }
-      noChildrenLeft = false;
       autocompleteBuilder.push(key);
       node = node.children[key];
     }
-    if (noChildrenLeft) {
-      break;
-    }
   }
-  autocompleteBuilder.push(" ");
+  if (node === startingNode) {
+      return null;
+  }
+  if (Object.keys(node.children).length === 0) {
+    autocompleteBuilder.push(" ");
+  }
   return autocompleteBuilder.join(""); 
-
 }
 
 let line: string[] = [];
