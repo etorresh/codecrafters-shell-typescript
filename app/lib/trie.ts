@@ -58,8 +58,8 @@ export class Trie {
       if (node.isWord) {
         availableCommands.push(fileNameBuilder);
       }
-      for (const [key, value] of Object.entries(node.children)) {
-        stack.push([value, fileNameBuilder + key])
+      for (const [key, childNode] of Object.entries(node.children)) {
+        stack.push([childNode, fileNameBuilder + key])
       }
     }
     return availableCommands;
