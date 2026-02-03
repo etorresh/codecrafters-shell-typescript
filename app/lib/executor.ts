@@ -77,3 +77,11 @@ export async function executeCommand(line: string) {
     }
   }
 }
+
+if (!process.stdin.isTTY) {
+  const onData = (chunk: any) => {
+    executeCommand(String(chunk));
+    process.stdin.off('data', onData);
+  }
+  process.stdin.on('data', onData);
+}

@@ -1,5 +1,7 @@
+import { fork } from "node:child_process";
 import type { Redirection } from "./constants";
 import { isRedirectionKey, Redirections } from "./constants";
+import path from "node:path";
 
 export function parse(input: string): [string[], Redirection, string | null] {
   const parsedInput: string[] = [];
@@ -9,7 +11,7 @@ export function parse(input: string): [string[], Redirection, string | null] {
   let redirection: string[] | null = null;
   let writingTo = parsedInput;
   let redirectionType: Redirection = null;
-  for (let ch of input) {
+  for (const [index, ch] of [...input].entries()) {
     if (escape) {
       if (specialChar === '"' && !['"', "\\", "$", "`"].includes(ch)) {
         currentChunk.push("\\");
@@ -34,6 +36,14 @@ export function parse(input: string): [string[], Redirection, string | null] {
         }
         currentChunk = [];
       }
+    } else if (ch === "|") {
+      const child = fork(path.join(__dirname, "./executor.ts"), [], {
+        // stdin, stdout, stderr
+        stdio: ['pipe','inherit', 'ignore', "ipc"]
+      });
+      child.stdin?.write(input.slice(index + 1));
+      // TODO: the last command on a pipeline is the one that goes to the terminal, this means I need collect all commands, and then middle commands get stdout pipe, and the last one gets inherit.
+      break;
     } else {
       currentChunk.push(ch);
     }

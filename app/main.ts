@@ -43,10 +43,10 @@ class ShellSession {
     process.stdout.write("$ ");
 
     readline.emitKeypressEvents(stdin);
+    // :O the Dual-command pipeline stage gave me a better understanding, TTY means that it's interactive.
+    // this means that it's also how we detect if a terminal is in non-interactive mode for piping/filtering
     if (process.stdin.isTTY) {
       process.stdin.setRawMode(true);
-    } else {
-      console.log("No TTY");
     }
     process.stdin.on("keypress", (str, key) => this.handleKeypress(str, key));
   }
