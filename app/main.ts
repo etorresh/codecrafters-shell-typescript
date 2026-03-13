@@ -2,9 +2,9 @@ import { readdir } from "node:fs/promises";
 import { delimiter} from "node:path"; // delimiter: between paths (; or :). sep:  within paths (\ or /)
 import readline from "node:readline";
 import { stdin } from "node:process";
-import { executeCommand } from "./lib/executor";
+import { executeCommand, executePipeline } from "./lib/executor";
+import { parseLine } from "./lib/parser";
 
-// local libs
 import { Trie } from "./lib/trie";
 
 class ShellSession {
@@ -58,6 +58,11 @@ class ShellSession {
       process.stdout.write("\n");
       const command = this.inputBuffer.join("");
       await executeCommand(command);
+
+      // testing parse line
+      const commands = parseLine(this.inputBuffer.join(""));
+      await executePipeline(commands);
+
       process.stdout.write("$ ");
       this.inputBuffer = [];
     } else if (key.name === "tab") {
