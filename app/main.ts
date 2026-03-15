@@ -53,16 +53,18 @@ class ShellSession {
 
   // real time terminal interaction handler
   async handleKeypress(str: string, key: any) {
+    // I originally only had "return" and it was a pain finding that the test runner passes "enter"
     if (key.name === "return" || key.name === "enter") {
-      // I originally only had "return" and it was a pain finding that the test runner passes "enter"
       process.stdout.write("\n");
-      const command = this.inputBuffer.join("");
-      await executeCommand(command);
 
-      // testing parse line
+      // TODO: handle a single command vs pipeline in a simpler and shared way
       const commands = parseLine(this.inputBuffer.join(""));
-      await executePipeline(commands);
-
+      if (commands.length == 1) {
+        await executeCommand(this.inputBuffer.join(""));
+      } else {
+        await executePipeline(commands);
+      }
+      
       process.stdout.write("$ ");
       this.inputBuffer = [];
     } else if (key.name === "tab") {
